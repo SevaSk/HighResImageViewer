@@ -1,58 +1,83 @@
-extern crate sdl2;
-use sdl2::image::{self, LoadTexture, InitFlag};
-use sdl2::render::{WindowCanvas, Texture};
-use sdl2::pixels::Color;
+extern crate minifb;
+
+use minifb::{Key, Window, WindowOptions};
+
+const WIDTH: usize = 640;
+const HEIGHT: usize = 360;
 
 
-fn render (canvas : &mut WindowCanvas, color : Color, texture: &Texture) -> Result<(), String>
+pub struct Color 
 {
-    canvas.set_draw_color(color);
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+}
 
-    canvas.clear();
+impl Color
+{
+    fn _from_rgb_u32 (c :u32) -> Color
+    {
+        let c = c.to_be_bytes();
 
-    canvas.copy(texture, None, None).unwrap();
+        Color::from((c[1], c[2], c[3]))
+    }
 
-    canvas.present();
+    fn to_rgb_u32(self) -> u32
+    {
+        let (r,g,b) : (u8, u8, u8) = self.into();
 
-    Ok (())
+        u32::from_be_bytes([0,r,g,b])
+    }
+
+    pub const fn new(r: f32, g: f32, b: f32) -> Self {
+        Color { r, g, b}
+    }
+}
+
+impl From<(u8, u8, u8)> for Color 
+{
+    /// Convert a `(R, G, B)` tuple of `u8`'s in the range `[0-255]` into a `Color`
+    fn from(val: (u8, u8, u8)) -> Self {
+        let (r, g, b) = val;
+        let rf = (f32::from(r)) / 255.0;
+        let gf = (f32::from(g)) / 255.0;
+        let bf = (f32::from(b)) / 255.0;
+        Color::new(rf, gf, bf)
+    }
+}
+
+impl From<Color> for (u8, u8, u8) {
+    /// Convert a `Color` into a `(R, G, B)` tuple of `u8`'s in the range of `[0-255]`,
+    fn from(color: Color) -> Self {
+        let r = (color.r *255.0) as u8;
+        let g = (color.g *255.0) as u8;
+        let b = (color.b *255.0) as u8;
+        (r, g, b)
+    }
 }
 
 fn main() {
 
-    let sdl = sdl2::init().unwrap();
+    let color = Color {r :0.5f32, g : 0.6f32, b :0.3f32};
 
-    let video_subsystem = sdl.video().unwrap();
+    let buffer: Vec<u32> = vec![color.to_rgb_u32(); WIDTH * HEIGHT];
 
-    let _image_context = image::init(InitFlag::PNG | InitFlag::JPG);
+    let mut window = Window::new(
+        "Test - ESC to exit",
+        WIDTH,
+        HEIGHT,
+        WindowOptions::default(),
+    )
+    .unwrap_or_else(|e| {
+        panic!("{}", e);
+    });
 
-    let window = video_subsystem
-        .window("Image viewer", 900, 700)
-        .resizable()
-        .build().unwrap();
+    // Limit to max ~60 fps update rate
+    window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
-    let mut canvas = window.into_canvas().build()
-    .expect("could not make a canvas");
-
-
-    let texture_creator = canvas.texture_creator();
-    let texture = texture_creator.load_texture("image.png").unwrap();
-
-    let mut i = 0;
-
-    let mut event_pump = sdl.event_pump().unwrap();
-    'main: loop {
-        for event in event_pump.poll_iter() {
-            match event 
-            {
-                sdl2::event::Event::Quit {..} => break 'main,
-                _ => {},
-            }
-        }
-
-        i = (i + 1) % 255;
-
-        render(&mut canvas, Color::RGB(i, 64, 255 - i), &texture).unwrap();
-
-        std::thread::sleep(std::time::Duration::new(0, 1_000_000_000u32 / 60));
+    while window.is_open() && !window.is_key_down(Key::Escape) {
+        window
+            .update_with_buffer(&buffer, WIDTH, HEIGHT)
+            .unwrap();
     }
 }
