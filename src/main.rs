@@ -5,7 +5,7 @@ use minifb::{Key, Window, WindowOptions};
 
 mod image_transform;
 
-const WIDTH: usize = 1000;
+const WIDTH: usize = 1500;
 const HEIGHT: usize = 1000;
 
 
@@ -19,7 +19,9 @@ fn main() {
 
     let image_buffer = image.into_raw();
 
-    let buffer = image_transform::apply_tranform(image_buffer, image_height, image_width, HEIGHT as u32, WIDTH as u32);
+    let transform = image_transform::Transform {image_buffer, y_1 : image_height, x_1 : image_width, y_2 : HEIGHT as u32, x_2 : WIDTH as u32};
+
+    let buffer = transform.apply_tranform();
 
     let mut window = Window::new(
         "Test - ESC to exit",
