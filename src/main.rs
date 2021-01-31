@@ -5,8 +5,8 @@ use minifb::{Key, Window, WindowOptions};
 
 mod image_transform;
 
-const WIDTH: usize = 1500;
-const HEIGHT: usize = 1000;
+const WIDTH: usize = 777;
+const HEIGHT: usize = 777;
 
 
 //fn update_picture_zoom ()
@@ -19,9 +19,14 @@ fn main() {
 
     let image_buffer = image.into_raw();
 
-    let transform = image_transform::Transform {image_buffer, y_1 : image_height, x_1 : image_width, y_2 : HEIGHT as u32, x_2 : WIDTH as u32};
+    let mut transform = image_transform::Transform {
+        image_buffer, y_1 : image_height as f32,
+        x_1 : image_width as f32,
+        y_2 : HEIGHT as f32,
+        x_2 : WIDTH as f32, 
+        scale : 1.0};
 
-    let buffer = transform.apply_tranform();
+    let mut buffer = transform.apply_tranform();
 
     let mut window = Window::new(
         "Test - ESC to exit",
@@ -36,22 +41,20 @@ fn main() {
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
-    let mut scroll_zoom = 0.0;
-
     while window.is_open()
     {
         window.get_keys().map(|keys| {
             for t in keys {
                 match t {
                     Key::LeftCtrl => {
-                        let scroll = window.get_scroll_wheel().unwrap();
 
-                        if scroll.0 != scroll_zoom
+                        window.get_scroll_wheel().map (|scroll|
                         {
-                            //update_picture_zoom(&buffer, scroll.0 - scroll_zoom);
-                            scroll_zoom = scroll.0;
-                        }
+                            transform.scroll_to_scale(scroll.1);
+                            buffer = transform.apply_tranform();
 
+                            println!("scrolling {}", transform.scale);
+                        });
                     },
                     _ => (),
                 }
